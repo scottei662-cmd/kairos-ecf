@@ -17,6 +17,7 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+   bookings     Booking[]
   
 
   @@map("user")
@@ -64,4 +65,47 @@ model Verification {
   updatedAt  DateTime? @updatedAt
 
   @@map("verification")
+}
+
+enum SpaceType {
+  OPEN_SPACE
+  BUREAU_PRIVE
+  SALLE_REUNION
+  CABINE
+}
+
+model Space {
+  id          String    @id @default(cuid())
+  name        String                        // Nom de l'espace (ex: "Bureau 12")
+  description String                        // Description détaillée
+  capacity    Int                           // Nombre de personnes maximum
+  type        SpaceType                     // Type parmi l'enum SpaceType
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]                     // Relation inverse : toutes les réservations sur cet espace
+
+  @@map("space")
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date              // Date de la réservation (jour uniquement)
+  startTime DateTime @db.Time              // Heure de début
+  endTime   DateTime @db.Time              // Heure de fin (doit être > startTime)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK → membre qui a créé la réservation
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // FK → espace concerné par la réservation
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  // Contrainte d'unicité : un espace ne peut pas avoir deux réservations
+  // qui se chevauchent sur le même créneau (date + horaires)
+  @@unique([spaceId, date, startTime, endTime])
+
+  @@map("booking")
 }
